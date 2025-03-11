@@ -65,8 +65,3 @@ $ cd NW_Lab
 
 ## ⭐ Spread the Word!  
 If you found this helpful, give it a ⭐ and share it with your peers!
-```
-
----
-
-Now, just copy-paste this into your **README.md** file, and you're all set! 🚀 Let me know if you need tweaks.
