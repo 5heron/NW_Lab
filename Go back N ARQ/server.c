@@ -4,75 +4,68 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <time.h>
-#include <sys/select.h>
 
 #define PORT 8080
-#define WIN_SIZE 4
-#define MAX_SEQ 10
-#define LOSS_PROB 20   // 20% chance of packet loss
-#define TIMEOUT_SEC 2  // Retransmit after 2 sec timeout
+#define LOSS_PROB 5      
 
-typedef struct {
-    int seq_no;
-    char data[50];
-} Packet;
-
-// Function to setup the UDP socket
 int setup_socket(struct sockaddr_in *addr) {
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    
     addr->sin_family = AF_INET;
     addr->sin_addr.s_addr = INADDR_ANY;
     addr->sin_port = htons(PORT);
+    
     bind(sockfd, (struct sockaddr *)addr, sizeof(*addr));
+    
     return sockfd;
 }
 
 int main() {
-    struct sockaddr_in client;
-    socklen_t len = sizeof(client);
-    int sockfd = setup_socket(&client), base = 0, next = 0, ack;
-    char buf[10];
-    struct timeval timeout = {TIMEOUT_SEC, 0};
-    fd_set read_fds;
-
-    // Wait for client connection
-    recvfrom(sockfd, buf, sizeof(buf), 0, (struct sockaddr *)&client, &len);
-    printf("[SERVER] Client connected!\n");
-
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t addr_len = sizeof(client_addr);
+    char buffer[1024] = {0};
+    int expected_seq = 0;  // Next expected sequence number
+    int last_ack_sent = -1;
+    
+    // Seed random generator
     srand(time(NULL));
-
-    while (base < MAX_SEQ) {
-        // Send packets within the window
-        while (next < base + WIN_SIZE && next < MAX_SEQ) {
-            if (rand() % 100 >= LOSS_PROB) {  // Simulate packet loss
-                Packet pkt = {next, ""};
-                sprintf(pkt.data, "Packet %d", next);
-                sendto(sockfd, &pkt, sizeof(pkt), 0, (struct sockaddr *)&client, len);
-                printf("[SENT] %d\n", next);
-            } else {
-                printf("[DROPPED] %d\n", next);
-            }
-            next++;
+    int sockfd = setup_socket(&server_addr);
+    printf("[SERVER] Waiting for packets...\n");    
+    while (1) {
+        // Zero out buffer manually
+        for (int i = 0; i < 1024; i++) {
+            buffer[i] = 0;
         }
-
-        // Wait for ACK with timeout
-        FD_ZERO(&read_fds);
-        FD_SET(sockfd, &read_fds);
-        select(sockfd + 1, &read_fds, NULL, NULL, &timeout);
-
-        if (FD_ISSET(sockfd, &read_fds)) {
-            recvfrom(sockfd, &ack, sizeof(ack), 0, (struct sockaddr *)&client, &len);
-            printf("[ACK] %d\n", ack);
-            base = ack + 1;  // Move the window forward
+        // Receive packet
+        recvfrom(sockfd, buffer, sizeof(buffer), 0, 
+                (struct sockaddr *)&client_addr, &addr_len);
+        int seq = atoi(buffer);
+        printf("[RECEIVED] Packet %d\n", seq);
+        // Simulate packet loss
+        if (rand() % LOSS_PROB == 0) {
+            printf("[DROPPED] Packet %d (simulating loss)\n", seq);
+            continue;
+        }
+        // Go-Back-N: Accept only in-order packets
+        if (seq == expected_seq) {
+            printf("[ACCEPTED] Packet %d\n", seq);
+            expected_seq++;
+            last_ack_sent = seq;
         } else {
-            printf("[TIMEOUT] Resending from %d\n", base);
-            next = base;  // Retransmit from the last unacknowledged packet
+            printf("[DISCARDED] Out-of-order packet %d, expected %d\n", 
+                  seq, expected_seq);
         }
+        // Simulate ACK loss
+        if (rand() % LOSS_PROB == 0) {
+            printf("[DROPPED] ACK %d (simulating ACK loss)\n", last_ack_sent);
+            continue;
+        }   
+        // Send ACK
+        sprintf(buffer, "%d", last_ack_sent);
+        sendto(sockfd, buffer, strlen(buffer), 0, 
+              (struct sockaddr *)&client_addr, addr_len);
+        printf("[ACK] Sent %d\n", last_ack_sent);               
     }
-
-    // Signal client that transmission is complete
-    sendto(sockfd, &(int){-1}, sizeof(int), 0, (struct sockaddr *)&client, len);
-    printf("[SERVER] Transmission complete.\n");
     close(sockfd);
     return 0;
 }
