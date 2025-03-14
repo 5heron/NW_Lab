@@ -9,15 +9,17 @@ University: APJ Abdul Kalam Technological University
 ## 📌 Content
 
 - **[TCP](TCP)**
-  - TCP Client-Server (Basic)
+  - [TCP Client-Server (Basic)](TCP/Basic)
+  - [TCP Client-Server (Bidirectional)](TCP/Bidirectional)
+  - [TCP Client-Server (Bidirectional Thread)](TCP/Bidirectional%20Threads)
 
 - **[UDP](UDP)**
   - UDP Client-Server (Basic)
 
-- **[Go-Back-N ARQ](Go_back_N_ARQ)**
+- **[Go-Back-N ARQ](Go%20back%20N%20ARQ)**
   - Implementation of Go-Back-N protocol
 
-- **[Selective Repeat](Selective_Repeat)**
+- **[Selective Repeat](Selective%20Repeat)**
   - Implementation of Selective Repeat protocol
 
 ## 🔧 Requirements
