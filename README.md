@@ -14,7 +14,9 @@ University: APJ Abdul Kalam Technological University
   - [TCP Client-Server (Bidirectional Thread)](TCP/Bidirectional%20Threads)
 
 - **[UDP](UDP)**
-  - UDP Client-Server (Basic)
+  - [UDP Client-Server (Basic)](UDP/Basic)
+  - [UDP Client-Server (Bidirectional)](UDP/Bidirectional)
+  - [UDP Client-Server (Bidirectional Thread)](UDP/Bidirectional%20Threads)
 
 - **[Go-Back-N ARQ](Go%20back%20N%20ARQ)**
   - Implementation of Go-Back-N protocol
