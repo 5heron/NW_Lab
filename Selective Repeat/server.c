@@ -27,31 +27,32 @@ int main() {
     int received[MAX_SEQ] = {0}; // Tracks received packets
     int expected_seq = 0;
 
-    printf("[SERVER] Waiting for packets...\n");
+    printf("Server Waiting for packets...\n");
 
     while (1) {
         recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&client_addr, &addr_len);
         int seq = atoi(buffer);
         printf("[RECEIVED] Packet %d\n", seq);
-
         if (rand() % LOSS_PROB == 0) {  
-            printf("[DROPPED] Packet %d\n", seq);
+            printf("[DROPPED] Packet %d, to simulate packet loss.\n", seq);
             continue;
         }
-
-        received[seq] = 1; // Mark packet as received
-
-        while (received[expected_seq]) {
-            expected_seq++;  // Deliver packets in order
-        }
-
+        if(received[seq])
+            printf("[DUPLICATE] Packet %d Discarded\n",seq);
+        else
+            received[seq] = 1; // Mark packet as received
         if (rand() % LOSS_PROB == 0) {  
-            printf("[DROPPED] ACK %d\n", seq);
+            printf("[DROPPED] ACK %d, to simulate ACK loss\n", seq);
             continue;
         }
-
         sprintf(buffer, "%d", seq);
         sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr *)&client_addr, addr_len);
-        printf("[ACK] %d\n", seq);
+        printf("[SENT ACK] For Packet %d\n", seq);
+        while (expected_seq < MAX_SEQ && received[expected_seq])
+            expected_seq++;  // Deliver packets in order
+        if (expected_seq == MAX_SEQ){
+            printf("All packets recieved\n");
+            break;
+        }
     }
 }

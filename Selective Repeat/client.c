@@ -29,7 +29,7 @@ int main() {
     int acked[MAX_SEQ] = {0}; // Tracks received ACKs
     int sockfd = setup_socket(&server_addr);
 
-    printf("[CLIENT] Connected!\n");
+    printf("Client Connected!\n");
 
     while (base < MAX_SEQ) {
         while (next_seq < base + WINDOW_SIZE && next_seq < MAX_SEQ) {
@@ -43,14 +43,17 @@ int main() {
 
         if (recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&server_addr, &addr_len) > 0) {
             int ack = atoi(buffer);
-            printf("[ACK RECEIVED] %d\n", ack);
+            printf("[ACK RECEIVED] Packet %d\n", ack);
             acked[ack] = 1;
-
-            while (acked[base]) {
+            int flag = 0;
+            while (base != MAX_SEQ && acked[base]){
+                flag = 1;
                 base++;  // Move window when base packet is ACKed
             }
+            if (flag == 1 && base != MAX_SEQ)
+                printf("[BASE] moved to %d\n",base);
         } else {
-            printf("[TIMEOUT] Resending unacked packets...\n");
+            printf("[TIMEOUT] Resending unACKed packets...\n");
             next_seq = base;  // Retransmit only unacked packets
         }
     }
