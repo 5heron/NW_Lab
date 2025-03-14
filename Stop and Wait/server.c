@@ -53,7 +53,10 @@ void main()
         {
             drop = rand()%8;
             if (drop<=1){
-                printf("\n[RECEIVED] Packet %d, but will be dropped to simulate [LOST PACKET]\n", recvPkt.seqno);
+                if (recvPkt.seqno == expected_seq % 2)
+                    printf("\n[RECEIVED] Packet %d, but will be dropped to simulate [LOST PACKET]\n", recvPkt.seqno);
+                else
+                    printf("\n[DUPLICATE] Packet with no. %d discarded, sending ACK again\n", recvPkt.seqno);
                 continue;
             }
             if (drop<=2){
