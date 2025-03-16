@@ -6,7 +6,8 @@
 #include <time.h>
 
 #define PORT 8080
-#define LOSS_PROB 5      
+#define LOSS_PROB 5
+#define MAX_SEQ 10        
 
 int setup_socket(struct sockaddr_in *addr) {
     int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -51,10 +52,12 @@ int main() {
             printf("[ACCEPTED] Packet %d\n", seq);
             expected_seq++;
             last_ack_sent = seq;
-        } else {
+        } else if (seq > expected_seq)
             printf("[DISCARDED] Out-of-order packet %d, expected %d\n", 
                   seq, expected_seq);
-        }
+        else
+            printf("[DUPLICATE] packet %d, expected %d\n", 
+                  seq, expected_seq);
         // Simulate ACK loss
         if (rand() % LOSS_PROB == 0) {
             printf("[DROPPED] ACK %d (simulating ACK loss)\n", last_ack_sent);
@@ -64,7 +67,11 @@ int main() {
         sprintf(buffer, "%d", last_ack_sent);
         sendto(sockfd, buffer, strlen(buffer), 0, 
               (struct sockaddr *)&client_addr, addr_len);
-        printf("[ACK] Sent %d\n", last_ack_sent);               
+        printf("[ACK] Sent %d\n", last_ack_sent);
+        if (expected_seq == MAX_SEQ){
+            printf("All packets received\n");
+            break;
+        }               
     }
     close(sockfd);
     return 0;
