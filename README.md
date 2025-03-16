@@ -8,6 +8,8 @@ University: APJ Abdul Kalam Technological University
 
 ## 📌 Content
 
+- **[COMPACT CODE](Compact%20Code)**
+
 - **[TCP](TCP)**
   - [TCP Client-Server (Basic)](TCP/Basic)
   - [TCP Client-Server (Bidirectional)](TCP/Bidirectional)
