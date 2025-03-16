@@ -13,16 +13,25 @@ University: APJ Abdul Kalam Technological University
   - [TCP Client-Server (Bidirectional)](TCP/Bidirectional)
   - [TCP Client-Server (Bidirectional Thread)](TCP/Bidirectional%20Threads)
 
+    *MULTICHAT :*
+    - [Broadcast](TCP/Multi%20Chat%20TCP/Broadcast)
+  
+
 - **[UDP](UDP)**
   - [UDP Client-Server (Basic)](UDP/Basic)
   - [UDP Client-Server (Bidirectional)](UDP/Bidirectional)
   - [UDP Client-Server (Bidirectional Thread)](UDP/Bidirectional%20Threads)
 
-- **[Go-Back-N ARQ](Go%20back%20N%20ARQ)**
-  - Implementation of Go-Back-N protocol
+    *PROTOCOLS :*
+    - [Implementation of Stop-And-Wait protocol](UDP/Stop%20and%20Wait)
+    - [Implementation of Go-Back-N protocol](UDP/Go%20back%20N%20ARQ)
+    - [Implementation of Selective Repeat protocol](UDP/Selective%20Repeat)
 
-- **[Selective Repeat](Selective%20Repeat)**
-  - Implementation of Selective Repeat protocol
+  *OTHERS :*
+  - **[Leaky Bucket](Leaky%20Bucket)**
+  - **[Distance Vector](Distance%20Vector)**
+  - **[File Transfer](File%20Transfer)**
+
 
 ## 🔧 Requirements
 
