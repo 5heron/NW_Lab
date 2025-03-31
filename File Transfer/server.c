@@ -1,73 +1,92 @@
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
-#include <arpa/inet.h>
 
 #define PORT 8080
-#define BUFFER_SIZE 1024
-#define BACKLOG 5  // Max pending connections
+#define BUF_SIZE 1024
+#define SOCKET_ERROR (-1)
+#define MAX_CLIENTS 10
 
-int setup_socket() {
-    int sockfd;
-    struct sockaddr_in addr;
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        printf("Socket creation failed\n");
-        return -1;
-    }
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(PORT);
-    addr.sin_addr.s_addr = INADDR_ANY;
-    if (bind(sockfd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        printf("Bind failed\n");
-        close(sockfd);
-        return -1;
-    }
-    if (listen(sockfd, BACKLOG) < 0) {
-        printf("Listen failed\n");
-        close(sockfd);
-        return -1;
-    }
-    return sockfd;
+int check(int exp, const char *msg) {
+  if (exp == SOCKET_ERROR) {
+    perror(msg);
+    exit(EXIT_FAILURE);
+  }
+  return exp;
 }
 
-void send_file(FILE *fp, int client_sock) {
-    char buffer[BUFFER_SIZE];
+void *handle_client(void *arg) {
+  int client_sock = *(int *)arg;
+  free(arg);
+  char filename[256] = {0};
+  int bytes_read = check(read(client_sock, filename, sizeof(filename) - 1),
+                         "Error reading filename from client");
+  filename[bytes_read] = '\0';
+  printf("Client requested file: %s\n", filename);
 
-    while (fgets(buffer, BUFFER_SIZE, fp) != NULL) {
-        send(client_sock, buffer, strlen(buffer), 0);
-        memset(buffer, 0, BUFFER_SIZE);
+  FILE *fp = fopen(filename, "r");
+  if (fp == NULL) {
+    char *error_msg = "File not found";
+    write(client_sock, error_msg, strlen(error_msg));
+  } else {
+    char buffer[BUF_SIZE];
+    size_t bytes;
+    while ((bytes = fread(buffer, 1, BUF_SIZE, fp)) > 0) {
+      if (write(client_sock, buffer, bytes) < 0) {
+        perror("Error sending file content");
+        break;
+      }
     }
-    printf("[SERVER] File sent successfully.\n");
+    fclose(fp);
+  }
+  close(client_sock);
+  pthread_exit(NULL);
 }
 
 int main() {
-    int server_sock, client_sock;
-    struct sockaddr_in client_addr;
-    socklen_t client_size;
-    char filename[BUFFER_SIZE];
+  int server_sock;
+  struct sockaddr_in server_addr, client_addr;
+  socklen_t client_len = sizeof(client_addr);
+  server_sock =
+      check(socket(AF_INET, SOCK_STREAM, 0), "Socket creation failed!");
 
-    server_sock = setup_socket();
-    printf("[SERVER] Waiting for connections...\n");
+  int opt = 1;
+  setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    client_size = sizeof(client_addr);
-    client_sock = accept(server_sock, (struct sockaddr*)&client_addr, &client_size);
-    printf("[SERVER] Client connected.\n");
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_addr.s_addr = INADDR_ANY;
+  server_addr.sin_port = htons(PORT);
 
-    recv(client_sock, filename, BUFFER_SIZE, 0);
-    printf("[SERVER] Client requested file: %s\n", filename);
+  check(bind(server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)),
+        "Socket binding failed!");
 
-    FILE *fp = fopen(filename, "r");
-    if (fp == NULL) {
-        printf("[SERVER] File not found.\n");
-        send(client_sock, "File not found", 14, 0);
-    } else {
-        send_file(fp, client_sock);
-        fclose(fp);
+  check(listen(server_sock, 5), "Listening failed!");
+  printf("Server listening on port %d...\n", PORT);
+
+  int next_client = 0;
+  pthread_t clients[MAX_CLIENTS];
+  while (1) {
+    int *client_sock = malloc(sizeof(int));
+    *client_sock =
+        check(accept(server_sock, (struct sockaddr *)&client_addr, &client_len),
+              "Failed to accept connection!");
+
+    if (pthread_create(&clients[next_client], NULL, handle_client,
+                       client_sock) != 0) {
+      perror("Error creating thread");
+      close(*client_sock);
+      free(client_sock);
+      continue;
     }
-
-    close(client_sock);
-    close(server_sock);
-    return 0;
+    pthread_detach(clients[next_client]);
+    next_client++;
+  }
+  return 0;
 }

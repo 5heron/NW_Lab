@@ -1,63 +1,63 @@
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
-#include <arpa/inet.h>
 
 #define PORT 8080
-#define BUFFER_SIZE 1024
+#define BUF_SIZE 1024
+#define SOCKET_ERROR (-1)
 
-int setup_socket(char ip_addr[]) {
-    int sockfd;
-    struct sockaddr_in addr;
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        printf("Socket creation failed\n");
-        return -1;
-    }
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(PORT);
-    addr.sin_addr.s_addr = inet_addr(ip_addr);
-    if (connect(sockfd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        printf("Connect failed\n");
-        close(sockfd);
-        return -1;
-    }
-    return sockfd;
+int check(int exp, const char *msg) {
+  if (exp == SOCKET_ERROR) {
+    perror(msg);
+    exit(EXIT_FAILURE);
+  }
+  return exp;
 }
 
-void receive_file(int sockfd, char *filename) {
-    char buffer[BUFFER_SIZE];
-    FILE *fp = fopen(filename, "w");
+int main(int argc, char *argv[]) {
+  if (argc != 2) {
+    fprintf(stderr, "Usage: %s <server_ip>\n", argv[0]);
+    exit(EXIT_FAILURE);
+  }
 
-    if (fp == NULL) {
-        printf("[CLIENT] Error opening file.\n");
-        return;
-    }
+  int sock = check(socket(AF_INET, SOCK_STREAM, 0), "Error creating socket!");
+  struct sockaddr_in server_addr;
+  char filename[256];
+  char buffer[BUF_SIZE];
 
-    while (recv(sockfd, buffer, BUFFER_SIZE, 0) > 0) {
-        fprintf(fp, "%s", buffer);
-        memset(buffer, 0, BUFFER_SIZE);
-    }
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = htons(PORT);
 
-    printf("[CLIENT] File received and saved as %s.\n", filename);
-    fclose(fp);
-}
+  if (inet_pton(AF_INET, argv[1], &server_addr.sin_addr) <= 0) {
+    perror("Invalid address/ Address not supported");
+    close(sock);
+    exit(EXIT_FAILURE);
+  }
 
-int main() {
-    int sockfd;
-    struct sockaddr_in server_addr;
-    char filename[BUFFER_SIZE];
+  check(connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)),
+        "Failed to connect");
 
-    sockfd = setup_socket("127.0.0.1");   
-    printf("[CLIENT] Connected to server.\n");
+  printf("Enter the filename to request: ");
+  if (fgets(filename, sizeof(filename), stdin) == NULL) {
+    fprintf(stderr, "Error reading filename\n");
+    close(sock);
+    exit(EXIT_FAILURE);
+  }
+  filename[strcspn(filename, "\n")] = '\0';
 
-    printf("[CLIENT] Enter filename to request: ");
-    fgets(filename, BUFFER_SIZE, stdin);
-
-    send(sockfd, filename, strlen(filename), 0);
-    receive_file(sockfd, filename);
-
-    close(sockfd);
-    return 0;
+  send(sock, &filename, sizeof(filename) + 1, 0);
+  int bytes_read;
+  while ((bytes_read = check(read(sock, buffer, sizeof(buffer) - 1),
+                             "Error receiving file contents from server")) >
+         0) {
+    buffer[bytes_read] = '\0';
+    printf("%s\n", buffer);
+  }
+  close(sock);
+  return 0;
 }
