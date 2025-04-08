@@ -25,16 +25,18 @@ int main() {
     setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (struct timeval*)&t, sizeof(t));
     struct sockaddr_in server_addr = { AF_INET, htons(PORT), inet_addr("127.0.0.1") };
     socklen_t addr_len = sizeof(server_addr);
+    //connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)); //In TCP
     if (sockfd < 0) exit(EXIT_FAILURE);
     struct pkt sendPkt, recvPkt;
     sendPkt.seqno = 0, sendPkt.ACK = 1;
 
     while (base < MAX_SEQ) {
         while (sendPkt.seqno < base + WINDOW_SIZE && sendPkt.seqno < MAX_SEQ){
+            //send(sockfd, &sendPkt, sizeof(sendPkt), 0); //In TCP
 		    sendto(sockfd, &sendPkt, sizeof(sendPkt), 0, (struct sockaddr*)&server_addr, addr_len);
             printf("[SENT] Packet %d\n", sendPkt.seqno++);
         }
-        
+        //recvLen = recv(sockfd, &recvPkt, sizeof(recvPkt), 0); //In TCP
         recvLen = recvfrom(sockfd, &recvPkt, sizeof(recvPkt), 0, (struct sockaddr*)&server_addr, &addr_len);
         if (recvLen>0){
             printf("\nACK recieved for packet no. %d \n", recvPkt.seqno);
