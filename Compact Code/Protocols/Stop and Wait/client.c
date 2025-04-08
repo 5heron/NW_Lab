@@ -24,7 +24,8 @@ int main() {
     setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (struct timeval*)&t, sizeof(t));
     struct sockaddr_in server_addr = { AF_INET, htons(PORT), inet_addr("127.0.0.1") };
     socklen_t addr_len = sizeof(server_addr);
-    if (sockfd < 0) exit(EXIT_FAILURE);
+    //connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)); //In TCP    
+	if (sockfd < 0) exit(EXIT_FAILURE);
     struct pkt sendPkt, recvPkt;
 
     while(counter != MAX_SEQ)
@@ -33,10 +34,12 @@ int main() {
 		fgets(sendPkt.data, BUFFER_SIZE, stdin);
 		sendPkt.ACK =0;
 		sendPkt.seqno = counter % 2;
+        //send(sockfd, &sendPkt, sizeof(sendPkt), 0); //In TCP
 		sendto(sockfd, &sendPkt, sizeof(sendPkt), 0, (struct sockaddr*)&server_addr, addr_len);
 		
 		while(1)
 		{
+        	//recvLen = recv(sockfd, &recvPkt, sizeof(recvPkt), 0); //In TCP
 			recvLen = recvfrom(sockfd, &recvPkt, sizeof(recvPkt), 0, (struct sockaddr*)&server_addr, &addr_len);
 			if (recvLen>=0){
 				printf("\nACK recieved for packet no. %d \n", recvPkt.seqno);
@@ -45,6 +48,7 @@ int main() {
 			}
 			else{
 				printf("\nTimeout! Pkt will be resent\n");
+        		//send(sockfd, &sendPkt, sizeof(sendPkt), 0); //In TCP
 				sendto(sockfd, &sendPkt, sizeof(sendPkt), 0, (struct sockaddr*)&server_addr, addr_len);
 			}		
 		}	
