@@ -17,7 +17,7 @@ struct pkt {
 
 int main() {
     //In TCP use SOCK_STREAM    
-    int sockfd = socket(AF_INET, SOCK_DGRAM, 0), drop, expected_seq = 0, received[MAX_SEQ] = {0}, acksend[MAX_SEQ];
+    int sockfd = socket(AF_INET, SOCK_DGRAM, 0), drop, counter = 0, received[MAX_SEQ] = {0};
     struct sockaddr_in addr = { AF_INET, htons(PORT), INADDR_ANY };
     bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
     //Difference in TCP is highlighted in comments 
@@ -48,24 +48,14 @@ int main() {
         } 
         if (drop<=2){
             printf("[DROPPED] ACK %d (simulating ACK loss)\n", recvPkt.seqno);
-            acksend[recvPkt.seqno] = 0;
             continue;
         }
         sendPkt.seqno = recvPkt.seqno;
         printf("\n[ACK] Packet %d, sending ACK\n", sendPkt.seqno);
-        acksend[sendPkt.seqno] = 1;
         //send(client_fd, &sendPkt, sizeof(sendPkt), 0); //In TCP
         sendto(sockfd, &sendPkt, sizeof(sendPkt), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
-        while (expected_seq < MAX_SEQ && received[expected_seq])
-            expected_seq++;  // Deliver packets in order
-        if (expected_seq == MAX_SEQ) break;
-    }
-    for(int i = 0; i < MAX_SEQ; i++){
-        if(!acksend[i]){
-            sendPkt.seqno = i;
-            printf("\n[ACK] Packet %d, sending ACK\n", sendPkt.seqno);
-            sendto(sockfd, &sendPkt, sizeof(sendPkt), 0, (struct sockaddr*)&client_addr, sizeof(client_addr));
-        }
+        counter++;
+        if (counter == MAX_SEQ) break;
     }
     printf("All packets received\n");
     close(sockfd);
